@@ -12,7 +12,20 @@
           "package_name": "com.kadal.aayus"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "37223653667-0b9qorimmsspfmupamrou61vr2ulfmu1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kadal.aayus",
+            "certificate_hash": "6da9d8202ea92e66bf10d5876441faf6bf7c2707"
+          }
+        },
+        {
+          "client_id": "37223653667-46v2gd0qctalha7qto03f795qdke9ep0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBYFd7dqUDqYCOliRfeIg4BaB3LpDvyL04"
@@ -20,26 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:37223653667:android:05a49528303329948dec96",
-        "android_client_info": {
-          "package_name": "com.kadal.aayus.kadal_aayus"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBYFd7dqUDqYCOliRfeIg4BaB3LpDvyL04"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "37223653667-46v2gd0qctalha7qto03f795qdke9ep0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

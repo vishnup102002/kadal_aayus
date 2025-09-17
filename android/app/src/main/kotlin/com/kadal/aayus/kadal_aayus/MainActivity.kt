@@ -1,4 +1,4 @@
-package com.kadal.aayus.kadal_aayus
+package com.kadal.aayus
 
 import io.flutter.embedding.android.FlutterActivity
 

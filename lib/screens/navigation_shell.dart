@@ -1,11 +1,11 @@
-// lib/screens/navigation_shell.dart
-
 import 'package:flutter/material.dart';
 import 'package:kadal_aayus/screens/home_screen.dart'; // Contains AlertsFeed
 import 'package:kadal_aayus/screens/map_screen.dart';
 import 'package:kadal_aayus/utils/emergency_utils.dart';
 import 'package:kadal_aayus/utils/location_service.dart';
 import 'package:location/location.dart';
+import 'package:kadal_aayus/screens/alerts_feed.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 
 class NavigationShell extends StatefulWidget {
   @override
@@ -16,12 +16,23 @@ class _NavigationShellState extends State<NavigationShell> {
   int _selectedIndex = 0;
   final LocationService _locationService = LocationService();
   bool _isSendingSOS = false;
+  LocationData? _currentLocation;
 
-  // List of the main screens
   static final List<Widget> _widgetOptions = <Widget>[
-    AlertsFeed(), // Your existing alerts feed
-    MapScreen(),  // Your new map screen
+    AlertsFeed(),
+    MapScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _locationService.getLocationStream().listen((locationData) {
+      setState(() {
+        _currentLocation = locationData;
+      });
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -38,7 +49,6 @@ class _NavigationShellState extends State<NavigationShell> {
 
     await sendSOS(locationMessage);
 
-    // Add feedback to the user
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('SOS message sent!')),
@@ -47,11 +57,27 @@ class _NavigationShellState extends State<NavigationShell> {
     setState(() => _isSendingSOS = false);
   }
 
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Kadal Aayus - Alerts' : 'Live Map View'),
+        title: Text(_selectedIndex == 0
+            ? 'Kadal Aayus - Alerts'
+            : _currentLocation != null
+            ? 'Live Map: Lat: ${_currentLocation!.latitude?.toStringAsFixed(4)}, Lon: ${_currentLocation!.longitude?.toStringAsFixed(4)}'
+            : 'Live Map View'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
+        ],
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
@@ -81,4 +107,3 @@ class _NavigationShellState extends State<NavigationShell> {
     );
   }
 }
-
