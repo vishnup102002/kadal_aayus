@@ -8,8 +8,11 @@ import 'package:location/location.dart';
 import '../utils/location_service.dart';
 
 class MapScreen extends StatefulWidget {
+  // 1. Added the 'key' constructor for best practice
+  const MapScreen({super.key});
+
   @override
-  _MapScreenState createState() => _MapScreenState();
+  State<MapScreen> createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
@@ -58,25 +61,34 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Live Map View'),
+      ),
       body: FlutterMap(
         mapController: _mapController,
+        // 2. Used 'initialCenter' and 'initialZoom' to fix deprecation warnings
         options: MapOptions(
-          initialCenter: _userLocation ?? LatLng(10.8505, 76.2711), // Default to Kerala coast
+          initialCenter: _userLocation ?? const LatLng(10.8505, 76.2711),
           initialZoom: _userLocation != null ? 15.0 : 7.0,
         ),
         children: [
           TileLayer(
             urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: ['a', 'b', 'c'],
+            subdomains: const ['a', 'b', 'c'],
           ),
           if (_userLocation != null)
             MarkerLayer(
               markers: [
+                // 3. Used the required 'child' parameter instead of 'builder'
                 Marker(
                   width: 80.0,
                   height: 80.0,
                   point: _userLocation!,
-                  child: Icon(Icons.my_location, color: Colors.blue, size: 40.0),
+                  child: const Icon(
+                    Icons.my_location,
+                    color: Colors.blueAccent,
+                    size: 40.0,
+                  ),
                 ),
               ],
             ),
@@ -84,7 +96,8 @@ class _MapScreenState extends State<MapScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _centerOnUser,
-        child: Icon(Icons.my_location),
+        tooltip: 'Center on me',
+        child: const Icon(Icons.my_location),
       ),
     );
   }

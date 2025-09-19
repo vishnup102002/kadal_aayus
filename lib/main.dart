@@ -2,45 +2,46 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // <-- 1. Import Hive
+import 'package:hive_flutter/hive_flutter.dart';
 import 'firebase_options.dart';
 
-// Import your new navigation shell
-import 'screens/navigation_shell.dart';
+// Import the new TTS Service and the Dashboard Screen
+import 'screens/dashboard_screen.dart';
+import 'utils/tts_service.dart';
 
 void main() async {
-  // --- This part is correct and doesn't need changes ---
+  // Ensure all Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- 2. Initialize Hive for local storage ---
+  // Initialize local storage and Firebase
   await Hive.initFlutter();
-  await Hive.openBox('alertsBox'); // Open a 'box' to store alerts
-  // ------------------------------------------
+  await Hive.openBox('alertsBox');
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-  );
-  // --- End of correct part ---
 
-  runApp(MyApp());
+  // Initialize our dedicated TTS Service once on app startup
+  await TtsService().initialize();
+
+  // Run the app
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Hides the debug banner
+      debugShowCheckedModeBanner: false,
       title: 'Kadal Aayus',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // This now correctly points to the NavigationShell
-      home: NavigationShell(),
+      // Set the dashboard as the home screen
+      home: DashboardScreen(),
     );
   }
 }

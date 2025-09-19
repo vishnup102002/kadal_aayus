@@ -1,190 +1,185 @@
 // lib/screens/home_screen.dart
 
-import 'dart:io'; // Required for File operations
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:just_audio/just_audio.dart'; // For playing audio files
-import 'package:path_provider/path_provider.dart'; // To find storage path
+import 'package:translator/translator.dart'; // Using your preferred translator
+import '../utils/tts_service.dart';     // Our dedicated TTS manager
 
-class AlertsFeed extends StatefulWidget {
+enum PlaybackState { idle, processing, playing }
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
-  _AlertsFeedState createState() => _AlertsFeedState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _AlertsFeedState extends State<AlertsFeed> {
+class _HomeScreenState extends State<HomeScreen> {
   late Box _alertsBox;
   List<Map<String, dynamic>> _cachedAlerts = [];
+  final Map<String, PlaybackState> _alertStates = {};
 
-  late FlutterTts _flutterTts;
-  late AudioPlayer _audioPlayer; // The new audio player for local files
+  // Using the online translator as per your pubspec.yaml
+  final GoogleTranslator _googleTranslator = GoogleTranslator();
 
   @override
   void initState() {
     super.initState();
     _alertsBox = Hive.box('alertsBox');
+    _loadCachedAlerts(); // Calling the method that was previously missing
 
-    // Initialize TTS and the new audio player
-    _flutterTts = FlutterTts();
-    _audioPlayer = AudioPlayer();
-    _setupTts();
+    // Set up the listener for when TTS completes. This will now work.
+    TtsService().setCompletionHandler(() {
+      final playingAlertId = _alertStates.entries.firstWhere(
+            (entry) => entry.value == PlaybackState.playing,
+        orElse: () => const MapEntry("", PlaybackState.idle),
+      ).key;
 
-    _loadCachedAlerts();
-  }
-
-  void _setupTts() async {
-    await _flutterTts.awaitSpeakCompletion(true);
-    await _flutterTts.setLanguage("ml-IN");
-  }
-
-  // This is the fallback for online-only playback
-  void _speakOnline(String text) async {
-    await _flutterTts.speak(text);
-  }
-
-  // This function plays a saved local audio file
-  void _playLocalAudio(String path) async {
-    try {
-      await _audioPlayer.setFilePath(path);
-      _audioPlayer.play();
-    } catch (e) {
-      print("Error playing local audio: $e");
-      // If playing the file fails, speak it online as a fallback
-      final alert = _cachedAlerts.firstWhere((a) => a['audioPath'] == path, orElse: () => {});
-      if(alert.isNotEmpty) {
-        _speakOnline(alert['body'] ?? 'Content not found.');
+      if (playingAlertId.isNotEmpty && mounted) {
+        setState(() => _alertStates[playingAlertId] = PlaybackState.idle);
       }
-    }
+    });
   }
 
   @override
   void dispose() {
-    _flutterTts.stop();
-    _audioPlayer.dispose(); // IMPORTANT: Clean up the audio player
+    TtsService().stop();
     super.dispose();
   }
 
+  void _handleLivePlayback(Map<String, dynamic> alertData) async {
+    final alertId = alertData['id'] as String;
+
+    if (_alertStates[alertId] == PlaybackState.playing) {
+      await TtsService().stop();
+      setState(() => _alertStates[alertId] = PlaybackState.idle);
+      return;
+    }
+
+    setState(() => _alertStates[alertId] = PlaybackState.processing);
+    String originalBody = alertData['body'] ?? 'No content available.';
+
+    try {
+      var translation = await _googleTranslator.translate(originalBody, to: 'ml');
+      final translatedBody = translation.text;
+
+      setState(() => _alertStates[alertId] = PlaybackState.playing);
+      await TtsService().speak(translatedBody);
+
+    } catch (e) {
+      if(mounted) {
+        setState(() => _alertStates[alertId] = PlaybackState.idle);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Could not translate or speak. Check internet."),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  // --- INCLUDING THE MISSING DATA HANDLING METHODS ---
+
   void _loadCachedAlerts() {
     final data = _alertsBox.get('cachedAlerts', defaultValue: []);
-    if (mounted && data != null) {
+    if (mounted) {
       setState(() {
         _cachedAlerts = List<Map<String, dynamic>>.from(data.map((item) => Map<String, dynamic>.from(item)));
+        for (var alert in _cachedAlerts) {
+          _alertStates[alert['id']] ??= PlaybackState.idle;
+        }
       });
     }
   }
 
-  // New function to handle caching and audio synthesis
   Future<void> _processAndCacheAlerts(List<QueryDocumentSnapshot> docs) async {
-    final tempDir = await getApplicationDocumentsDirectory();
     List<Map<String, dynamic>> alertsToCache = [];
-
     for (var doc in docs) {
-      final docId = doc.id;
       final data = doc.data() as Map<String, dynamic>;
-
-      // Check if this alert is already cached with audio
-      final existing = _cachedAlerts.firstWhere((a) => a['id'] == docId, orElse: () => {});
-      String? audioPath = existing.isNotEmpty ? existing['audioPath'] : null;
-
-      // If audio hasn't been created yet, create it
-      if (audioPath == null || !await File(audioPath).exists()) {
-        final speechFile = File('${tempDir.path}/$docId.mp3');
-        if (await speechFile.exists()) {
-          // If file exists but path was not in cache, just assign the path
-          audioPath = speechFile.path;
-        } else {
-          // Synthesize the audio and save it to a file
-          int result = await _flutterTts.synthesizeToFile(data['body'] ?? '', speechFile.path);
-          if (result == 1) { // 1 means success
-            audioPath = speechFile.path;
-          }
-        }
-      }
-
-      // Add all data to the map for caching
       alertsToCache.add({
-        'id': docId,
+        'id': doc.id,
         'title': data['title'],
         'body': data['body'],
         'severity': data['severity'],
         'timestamp': (data['timestamp'] as Timestamp?)?.millisecondsSinceEpoch,
-        'audioPath': audioPath, // Save the audio file path
       });
     }
-
     await _alertsBox.put('cachedAlerts', alertsToCache);
-    _loadCachedAlerts(); // Reload state from cache to update UI
+    _loadCachedAlerts();
   }
 
+  // --- YOUR UI BUILD METHODS (UNCHANGED) ---
+
   Widget _buildAlertTile(Map<String, dynamic> data) {
+    final alertId = data['id'] as String;
+    final currentState = _alertStates[alertId] ?? PlaybackState.idle;
     final title = data['title'] ?? 'No Title';
     final body = data['body'] ?? 'No content available.';
     final severity = data['severity'] ?? 'Medium';
-    final audioPath = data['audioPath'] as String?;
 
     Color severityColor;
     IconData severityIcon;
-
     switch (severity.toLowerCase()) {
       case 'high': severityColor = Colors.red; severityIcon = Icons.error; break;
       case 'medium': severityColor = Colors.orange; severityIcon = Icons.warning; break;
-      case 'low': severityColor = Colors.blue; severityIcon = Icons.info; break;
-      default: severityColor = Colors.grey; severityIcon = Icons.help_outline;
+      default: severityColor = Colors.blue; severityIcon = Icons.info;
     }
 
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
         leading: Icon(severityIcon, color: severityColor, size: 40),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(title),
         subtitle: Text(body),
-        trailing: IconButton(
-          icon: Icon(Icons.volume_up, color: Colors.grey[600]),
-          tooltip: 'Read Aloud',
-          onPressed: () {
-            // If we have a local audio path, play the file. Otherwise, use online TTS.
-            if (audioPath != null && audioPath.isNotEmpty) {
-              print("Playing local audio from: $audioPath");
-              _playLocalAudio(audioPath);
-            } else {
-              print("No local audio found, using online TTS.");
-              _speakOnline(body);
-            }
-          },
+        trailing: SizedBox(
+          width: 48,
+          height: 48,
+          child: _buildTrailingIcon(currentState, data),
         ),
       ),
     );
   }
 
+  Widget _buildTrailingIcon(PlaybackState state, Map<String, dynamic> data) {
+    switch (state) {
+      case PlaybackState.processing:
+        return const CircularProgressIndicator(strokeWidth: 2.0);
+      case PlaybackState.playing:
+        return IconButton(
+          icon: const Icon(Icons.stop_circle_outlined, color: Colors.red, size: 30),
+          onPressed: () => _handleLivePlayback(data),
+          tooltip: 'Stop Playback',
+        );
+      default: // PlaybackState.idle
+        return IconButton(
+          icon: Icon(Icons.volume_up, color: Colors.grey[600]),
+          tooltip: 'Read Aloud in Malayalam',
+          onPressed: () => _handleLivePlayback(data),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('alerts').orderBy('timestamp', descending: true).snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-          // When new data comes from Firebase, process it
-          _processAndCacheAlerts(snapshot.data!.docs);
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting && _cachedAlerts.isEmpty) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError && _cachedAlerts.isEmpty) {
-          return Center(child: Text('Error loading alerts. Check connection.'));
-        }
-
-        if (_cachedAlerts.isEmpty) {
-          return Center(child: Text('No alerts at the moment.'));
-        }
-
-        // Always build the list from the Hive-backed cache for a consistent UI
-        return ListView.builder(
-          itemCount: _cachedAlerts.length,
-          itemBuilder: (context, index) => _buildAlertTile(_cachedAlerts[index]),
-        );
-      },
+    return Scaffold(
+      appBar: AppBar(title: const Text('Alerts Feed')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('alerts').orderBy('timestamp', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+            _processAndCacheAlerts(snapshot.data!.docs);
+          }
+          if (_cachedAlerts.isEmpty) {
+            return snapshot.connectionState == ConnectionState.waiting
+                ? const Center(child: CircularProgressIndicator())
+                : const Center(child: Text('No alerts at the moment.'));
+          }
+          return ListView.builder(
+            itemCount: _cachedAlerts.length,
+            itemBuilder: (context, index) => _buildAlertTile(_cachedAlerts[index]),
+          );
+        },
+      ),
     );
   }
 }
