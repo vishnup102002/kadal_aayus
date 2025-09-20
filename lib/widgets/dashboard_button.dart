@@ -8,31 +8,54 @@ class DashboardButton extends StatelessWidget {
   final VoidCallback onTap;
   final Color color;
 
+  // --- FIX: Added {super.key, ...} to the constructor ---
   const DashboardButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = Colors.grey, // Default color is grey
+    this.color = Colors.grey,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        elevation: 2.0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Card(
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(15),
+            gradient: LinearGradient(
+              colors: [color.withOpacity(0.8), color],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: color),
-              SizedBox(height: 10),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+              Icon(icon, size: 60, color: Colors.white),
+              const SizedBox(height: 15),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 2.0,
+                      color: Colors.black26,
+                      offset: Offset(1.0, 1.0),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
