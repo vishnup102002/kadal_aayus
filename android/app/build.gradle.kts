@@ -8,14 +8,14 @@ plugins {
 }
 
 android {
-    namespace = "com.kadal.aayus"  // ✅ Corrected namespace
+    namespace = "com.kadal.aayus"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true // ✅ Required for Java 11 features
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -23,8 +23,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.kadal.aayus"  // ✅ Matches your app ID
-        minSdk = 23   // 🔥 Required for Firestore and Firebase
+        applicationId = "com.kadal.aayus"
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -34,11 +34,8 @@ android {
     buildTypes {
         getByName("release") {
             signingConfig = signingConfigs.getByName("debug")
-
-            // Enable both code and resource shrinking for the release build
             isMinifyEnabled = true
             isShrinkResources = true
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -52,12 +49,14 @@ android {
 }
 
 dependencies {
+    // ✅ ADD THIS LINE - Firebase Bill of Materials
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    // ✅ Core library desugaring for Java 11
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 

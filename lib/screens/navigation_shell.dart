@@ -1,3 +1,4 @@
+import 'dart:async'; // 1. IMPORTANT: Import 'dart:async'
 import 'package:flutter/material.dart';
 import 'package:kadal_aayus/screens/home_screen.dart'; // Contains AlertsFeed
 import 'package:kadal_aayus/screens/map_screen.dart';
@@ -5,7 +6,9 @@ import 'package:kadal_aayus/utils/emergency_utils.dart';
 import 'package:kadal_aayus/utils/location_service.dart';
 import 'package:location/location.dart';
 import 'package:kadal_aayus/screens/alerts_feed.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+// ---- THIS IS CORRECT ----
+import 'package:firebase_auth/firebase_auth.dart';
+// Import FirebaseAuth
 
 class NavigationShell extends StatefulWidget {
   @override
@@ -18,6 +21,9 @@ class _NavigationShellState extends State<NavigationShell> {
   bool _isSendingSOS = false;
   LocationData? _currentLocation;
 
+  // 2. Create a variable to hold the location listener
+  late final StreamSubscription<LocationData> _locationSubscription;
+
   static final List<Widget> _widgetOptions = <Widget>[
     AlertsFeed(),
     MapScreen(),
@@ -27,11 +33,22 @@ class _NavigationShellState extends State<NavigationShell> {
   void initState() {
     super.initState();
 
-    _locationService.getLocationStream().listen((locationData) {
-      setState(() {
-        _currentLocation = locationData;
-      });
+    // 3. Assign the listener to the variable
+    _locationSubscription = _locationService.getLocationStream().listen((locationData) {
+      // 4. Add a safety check before calling setState
+      if (mounted) {
+        setState(() {
+          _currentLocation = locationData;
+        });
+      }
     });
+  }
+
+  // 5. Add the dispose method to cancel the listener
+  @override
+  void dispose() {
+    _locationSubscription.cancel();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
@@ -59,7 +76,7 @@ class _NavigationShellState extends State<NavigationShell> {
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
+    // This navigation is now handled automatically by AuthGate, but we keep the sign out
   }
 
   @override
