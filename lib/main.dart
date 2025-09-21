@@ -13,48 +13,62 @@ import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'utils/tts_service.dart';
 import 'services/auth_gate.dart';
+import 'services/notification_service.dart';
 
-// The background handler MUST be a top-level function (not inside any class).
-// Note: We need a reference to the NotificationService logic here if we want to
-// process the message, but for simplicity, we assume the OS handles showing it.
-// The main logic is handled by the NotificationService when the app is active.
+// -----------------------------
+// FCM Background Handler
+// Must be a top-level function
+// -----------------------------
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   print("Handling a background message: ${message.messageId}");
-  // The logic inside your NotificationService will handle saving this data
-  // when the app is next launched or brought to the foreground.
+
+  // Optional: you can handle Firestore saving here if NotificationService does not handle background
+  final data = message.data;
+  if (data.isNotEmpty) {
+    try {
+      await FirebaseFirestore.instance.collection('alerts').add({
+        'title': data['title'] ?? 'Alert',
+        'body': data['body'] ?? data['message'] ?? 'No content',
+        'severity': data['severity'] ?? 'Medium',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print("Background alert saved to Firestore: ${message.messageId}");
+    } catch (e) {
+      print("Error saving background alert: $e");
+    }
+  }
 }
 
 Future<void> main() async {
-  // Ensure all Flutter bindings are properly initialized before running the app.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- Initialize all services ONCE in the correct order ---
-
-  // 1. Initialize local storage (Hive).
+  // --- Initialize Hive
   await Hive.initFlutter();
   await Hive.openBox('alertsBox');
 
-  // 2. Initialize Firebase.
+  // --- Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 3. Enable Firestore's offline data persistence.
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-  );
+  // --- Enable Firestore offline persistence
+  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
 
-  // 4. Set the background message handler for Firebase Messaging.
+  // --- Set FCM background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // 5. Initialize your custom Text-to-Speech service.
+  // --- Initialize Text-to-Speech
   await TtsService().initialize();
 
-  // 6. Run the app.
+  // --- Initialize NotificationService (foreground + topic subscription)
+  final notificationService = NotificationService();
+  await notificationService.initNotifications();
+
+  // --- Run the app
   runApp(const MyApp());
 }
 
@@ -75,16 +89,12 @@ class MyApp extends StatelessWidget {
           elevation: 1,
         ),
       ),
-
-      // --- CORRECTED APP ENTRY POINT ---
-      // AuthGate will check if the user is logged in and show either the
-      // LoginScreen or the DashboardScreen. This is the correct approach.
+      // --- AuthGate checks if the user is logged in
       home: const AuthGate(),
-
-      // Routes are defined for named navigation, which is good practice.
+      // --- Named routes
       routes: {
         '/login': (context) =>  LoginScreen(),
-        '/home': (context) =>  DashboardScreen(),
+        '/home': (context) => const DashboardScreen(),
       },
     );
   }

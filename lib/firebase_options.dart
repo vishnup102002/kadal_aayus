@@ -55,7 +55,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '37223653667',
     projectId: 'kadal-67724',
     authDomain: 'kadal-67724.firebaseapp.com',
-    storageBucket: 'kadal-67724.firebasestorage.app',
+    storageBucket: 'kadal-67724.appspot.com',
     measurementId: 'G-3Z7PSREB7F',
   );
 
@@ -64,6 +64,6 @@ class DefaultFirebaseOptions {
     appId: '1:37223653667:android:05a49528303329948dec96',
     messagingSenderId: '37223653667',
     projectId: 'kadal-67724',
-    storageBucket: 'kadal-67724.firebasestorage.app',
+    storageBucket: 'kadal-67724.appspot.com',
   );
 }

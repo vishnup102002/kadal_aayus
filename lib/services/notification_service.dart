@@ -3,25 +3,29 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-// This function MUST be a top-level function.
-// It now handles background data messages and writes them to Firestore.
+/// --- Background message handler ---
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // You MUST initialize Firebase in the background handler.
   await Firebase.initializeApp();
   print("Handling a background message: ${message.messageId}");
 
-  // Check if the message contains a data payload with a 'message' key.
-  if (message.data.containsKey('message')) {
-    final alertMessage = message.data['message'];
-    print("Background data received: $alertMessage");
+  final data = message.data;
+  if (data.isNotEmpty) {
+    final alertTitle = data['title'] ?? 'Alert';
+    final alertBody = data['body'] ?? data['message'] ?? 'No content';
+    final alertSeverity = data['severity'] ?? 'Medium';
 
-    // Add the new alert to the 'alerts' collection in Firestore.
-    await FirebaseFirestore.instance.collection('alerts').add({
-      'message': alertMessage,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-    print("Background alert saved to Firestore.");
+    try {
+      final docRef = await FirebaseFirestore.instance.collection('alerts').add({
+        'title': alertTitle,
+        'body': alertBody,
+        'severity': alertSeverity,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print("Background alert saved to Firestore: ${docRef.id} | $alertTitle");
+    } catch (e) {
+      print("Failed to save background alert: $e");
+    }
   }
 }
 
@@ -30,59 +34,66 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
   FlutterLocalNotificationsPlugin();
 
+  /// Initialize Firebase Messaging and Local Notifications
   Future<void> initNotifications() async {
-    await _fcm.requestPermission();
+    await _fcm.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     final fcmToken = await _fcm.getToken();
     print("========================================");
     print("FCM Token: $fcmToken");
     print("========================================");
 
-    // Subscribe to the 'alert' topic.
+    // Subscribe to 'alert' topic
     await _fcm.subscribeToTopic('alert');
-    print('Successfully subscribed to topic: alert');
+    print('Subscribed to topic: alert');
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-    InitializationSettings(android: initializationSettingsAndroid);
-    await _localNotifications.initialize(initializationSettings);
+    // Local notification initialization
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidSettings);
+    await _localNotifications.initialize(initSettings);
 
     _setupMessageHandlers();
   }
 
+  /// Setup foreground and background message listeners
   void _setupMessageHandlers() {
-    // Handler for messages that arrive while the app is in the FOREGROUND.
+    // Foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('Got a message whilst in the FOREGROUND!');
-
-      // The notification payload (title, body) for what the user sees.
-      final notification = message.notification;
-      // The custom data payload for our app's logic.
+      print('Foreground message received: ${message.messageId}');
       final data = message.data;
 
-      if (notification != null && data.containsKey('message')) {
-        final alertMessage = data['message'];
-        print("Foreground data received: $alertMessage");
+      if (data.isNotEmpty) {
+        final alertTitle = data['title'] ?? 'New Alert';
+        final alertBody = data['body'] ?? data['message'] ?? 'No content';
+        final alertSeverity = data['severity'] ?? 'Medium';
 
-        // 1. Add the new alert to the 'alerts' collection in Firestore.
-        await FirebaseFirestore.instance.collection('alerts').add({
-          'message': alertMessage,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-        print("Foreground alert saved to Firestore.");
+        // Save alert to Firestore
+        try {
+          final docRef = await FirebaseFirestore.instance.collection('alerts').add({
+            'title': alertTitle,
+            'body': alertBody,
+            'severity': alertSeverity,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          print("Foreground alert saved to Firestore: ${docRef.id} | $alertTitle");
+        } catch (e) {
+          print("Failed to save foreground alert: $e");
+        }
 
-        // 2. Display a local notification to make the user aware.
+        // Show local notification
         _localNotifications.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
+          message.hashCode,
+          alertTitle,
+          alertBody,
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'high_importance_channel',
               'High Importance Notifications',
-              channelDescription:
-              'This channel is used for important notifications.',
+              channelDescription: 'Channel for important alerts',
               importance: Importance.max,
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
@@ -92,7 +103,7 @@ class NotificationService {
       }
     });
 
-    // Set the handler for background messages.
+    // Background messages
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 }
