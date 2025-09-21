@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "37223653667",
+    "project_id": "kadal-67724",
+    "storage_bucket": "kadal-67724.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:37223653667:android:e94f1ce43d6d451a8dec96",
+        "android_client_info": {
+          "package_name": "com.kadal.aayus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "37223653667-0b9qorimmsspfmupamrou61vr2ulfmu1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kadal.aayus",
+            "certificate_hash": "6da9d8202ea92e66bf10d5876441faf6bf7c2707"
+          }
+        },
+        {
+          "client_id": "37223653667-v4vijm67pkq7f4gruqdrv978ac5ljju1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kadal.aayus",
+            "certificate_hash": "3195683e25c99d5c8c321abd2914ae786d9674b4"
+          }
+        },
+        {
+          "client_id": "37223653667-46v2gd0qctalha7qto03f795qdke9ep0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYFd7dqUDqYCOliRfeIg4BaB3LpDvyL04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "37223653667-46v2gd0qctalha7qto03f795qdke9ep0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 // This function will trigger the device's SMS app
 Future<void> sendSOS(String locationText) async {
   // Replace with the actual emergency contact number
-  const String emergencyNumber = '+1234567890';
+  const String emergencyNumber = '+91 79026 35297';
   final Uri smsUri = Uri(
     scheme: 'sms',
     path: emergencyNumber,
