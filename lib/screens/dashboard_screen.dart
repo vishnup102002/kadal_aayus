@@ -1,5 +1,3 @@
-// lib/screens/dashboard_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../widgets/dashboard_button.dart';
@@ -9,12 +7,13 @@ import 'alerts_feed.dart';
 import 'map_screen.dart';
 import 'tts_settings_screen.dart';
 import 'compass_screen.dart';
+import 'weather_page.dart'; // --- IMPORT THE NEW WEATHER PAGE ---
 
 // Import utility and authentication services
 import '../utils/emergency_utils.dart';
 import '../utils/location_service.dart';
 import '../utils/tts_service.dart';
-import '../services/auth_service.dart'; // Make sure you have this service
+import '../services/auth_service.dart';
 import 'package:location/location.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -27,11 +26,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final LocationService _locationService = LocationService();
   final TtsService _ttsService = TtsService();
-  final AuthService _authService = AuthService(); // Instance of AuthService
+  final AuthService _authService = AuthService();
   bool _isSendingSOS = false;
 
   void _triggerSOS() async {
-    // SOS logic remains the same...
     bool confirm = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -61,9 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // --- NEW LOGOUT METHOD ---
   Future<void> _signOut() async {
-    // Show a confirmation dialog before logging out
     bool confirmLogout = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -80,7 +76,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (confirmLogout && mounted) {
       await _authService.signOut();
-      // After signing out, navigate to the login screen and remove all previous routes
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
     }
   }
@@ -95,11 +90,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Kadal Aayus', style: TextStyle(color: Colors.black)),
+        title: const Text('Kadal Aayus', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.blue.shade100,
         elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black),
-        // --- ADDED THE ACTIONS PROPERTY WITH THE LOGOUT BUTTON ---
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black87),
@@ -116,7 +110,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           children: [
-            // Your DashboardButtons remain the same...
             DashboardButton(
               icon: Icons.warning_amber_rounded,
               label: 'Alerts',
@@ -124,6 +117,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 _ttsService.speak("[translate:നിങ്ങൾക്ക് വന്നിട്ടുള്ള മുന്നറിയിപ്പുകൾ കാണാൻ]");
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const AlertsFeedScreen()));
+              },
+            ),
+            // --- NEW WEATHER BUTTON ---
+            DashboardButton(
+              icon: Icons.waves,
+              label: 'Marine Weather',
+              color: Colors.blue.shade400,
+              onTap: () {
+                _ttsService.speak("[translate:കാലാവസ്ഥ വിവരങ്ങൾ അറിയാൻ]");
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const WeatherPage()));
               },
             ),
             DashboardButton(
